@@ -74,13 +74,7 @@ import {
 } from "../data/FileManager";
 import { FileStatusStore } from "../data/fileStatusStore";
 import { LocalData } from "../data/LocalData";
-import {
-  isSavedToFirebase,
-  loadFilesFromFirebase,
-  loadFromFirebase,
-  saveFilesToFirebase,
-  saveToFirebase,
-} from "../data/firebase";
+import { getStorageBackend, storageBackend } from "../data/config";
 import {
   importUsernameFromLocalStorage,
   saveUsernameToLocalStorage,
@@ -157,7 +151,11 @@ class Collab extends PureComponent<CollabProps, CollabState> {
           throw new AbortError();
         }
 
-        return loadFilesFromFirebase(`files/rooms/${roomId}`, roomKey, fileIds);
+        return (await getStorageBackend()).loadFilesFromStorageBackend(
+          `files/rooms/${roomId}`,
+          roomKey,
+          fileIds,
+        );
       },
       saveFiles: async ({ addedFiles }) => {
         const { roomId, roomKey } = this.portal;
@@ -165,7 +163,9 @@ class Collab extends PureComponent<CollabProps, CollabState> {
           throw new AbortError();
         }
 
-        const { savedFiles, erroredFiles } = await saveFilesToFirebase({
+        const { savedFiles, erroredFiles } = await (
+          await getStorageBackend()
+        ).saveFilesToStorageBackend({
           prefix: `${FIREBASE_STORAGE_PREFIXES.collabFiles}/${roomId}`,
           files: await encodeFilesForUpload({
             files: addedFiles,
@@ -176,7 +176,7 @@ class Collab extends PureComponent<CollabProps, CollabState> {
 
         return {
           savedFiles: savedFiles.reduce(
-            (acc: Map<FileId, BinaryFileData>, id) => {
+            (acc: Map<FileId, BinaryFileData>, id: FileId) => {
               const fileData = addedFiles.get(id);
               if (fileData) {
                 acc.set(id, fileData);
@@ -186,7 +186,7 @@ class Collab extends PureComponent<CollabProps, CollabState> {
             new Map(),
           ),
           erroredFiles: erroredFiles.reduce(
-            (acc: Map<FileId, BinaryFileData>, id) => {
+            (acc: Map<FileId, BinaryFileData>, id: FileId) => {
               const fileData = addedFiles.get(id);
               if (fileData) {
                 acc.set(id, fileData);
@@ -296,7 +296,7 @@ class Collab extends PureComponent<CollabProps, CollabState> {
     if (
       this.isCollaborating() &&
       (this.fileManager.shouldPreventUnload(syncableElements) ||
-        !isSavedToFirebase(this.portal, syncableElements))
+        !storageBackend?.isSaved(this.portal, syncableElements))
     ) {
       // this won't run in time if user decides to leave the site, but
       //  the purpose is to run in immediately after user decides to stay
@@ -317,7 +317,7 @@ class Collab extends PureComponent<CollabProps, CollabState> {
   ) => {
     syncableElements = cloneJSON(syncableElements);
     try {
-      const storedElements = await saveToFirebase(
+      const storedElements = await (await getStorageBackend()).saveToStorageBackend(
         this.portal,
         syncableElements,
         this.excalidrawAPI.getAppState(),
@@ -725,7 +725,7 @@ class Collab extends PureComponent<CollabProps, CollabState> {
       this.excalidrawAPI.resetScene();
 
       try {
-        const elements = await loadFromFirebase(
+        const elements = await (await getStorageBackend()).loadFromStorageBackend(
           roomLinkData.roomId,
           roomLinkData.roomKey,
           this.portal.socket,

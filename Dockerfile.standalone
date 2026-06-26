@@ -1,0 +1,42 @@
+FROM --platform=${BUILDPLATFORM} node:24-alpine AS build
+
+WORKDIR /opt/node_app
+
+COPY . .
+
+# Replace import.meta.env with window._env_ so vars are injectable at runtime
+RUN grep -rl 'import\.meta\.env' --include="*.ts" --include="*.tsx" \
+      excalidraw-app packages --exclude-dir node_modules 2>/dev/null \
+    | xargs -r sed -i 's/import\.meta\.env/window._env_/g'
+
+RUN --mount=type=cache,target=/root/.cache/yarn \
+    npm_config_target_arch=${TARGETARCH} yarn --frozen-lockfile --network-timeout 600000
+
+ARG NODE_ENV=production
+
+RUN npm_config_target_arch=${TARGETARCH} yarn build:app:docker
+
+FROM nginx:stable-alpine-slim
+
+RUN apk add --no-cache python3
+
+COPY --from=build /opt/node_app/excalidraw-app/build /usr/share/nginx/html
+COPY launcher.py /launcher.py
+
+# Default env — all overridable at container start via docker-compose environment:
+ENV VITE_APP_BACKEND_V2_GET_URL=""
+ENV VITE_APP_BACKEND_V2_POST_URL=""
+ENV VITE_APP_WS_SERVER_URL=""
+ENV VITE_APP_FIREBASE_CONFIG="{}"
+ENV VITE_APP_STORAGE_BACKEND="http"
+ENV VITE_APP_HTTP_STORAGE_BACKEND_URL=""
+ENV VITE_APP_LIBRARY_URL="https://libraries.excalidraw.com"
+ENV VITE_APP_LIBRARY_BACKEND="https://us-central1-excalidraw-room-persistence.cloudfunctions.net/libraries"
+ENV VITE_APP_PLUS_LP="https://plus.excalidraw.com"
+ENV VITE_APP_PLUS_APP="https://app.excalidraw.com"
+ENV VITE_APP_ENABLE_TRACKING="false"
+
+HEALTHCHECK CMD wget -q -O /dev/null http://localhost || exit 1
+EXPOSE 80
+
+CMD ["python3", "/launcher.py", "/usr/share/nginx/html"]
