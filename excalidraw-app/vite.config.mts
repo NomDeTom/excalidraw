@@ -127,11 +127,17 @@ export default defineConfig(({ mode }) => {
           },
         },
       },
-      sourcemap: true,
+      sourcemap: mode !== "hub", // 23 MB of .map files nobody opens on the hub
       // don't auto-inline small assets (i.e. fonts hosted on CDN)
       assetsInlineLimit: 0,
     },
     plugins: [
+      // Hub build only: the hub serves /hub-return.js, a floating "back to the hub" link.
+      mode === "hub" && {
+        name: "hub-return",
+        transformIndexHtml: (html: string) =>
+          html.replace("</body>", '<script src="/hub-return.js" defer></script></body>'),
+      },
       Sitemap({
         hostname: "https://excalidraw.com",
         outDir: "build",
