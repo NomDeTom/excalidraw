@@ -33,7 +33,7 @@ const BraveMeasureTextError = () => {
               {el}
             </a>
           )}
-          discordLink={(el) => <a href="https://discord.gg/UexuTaE">{el}.</a>}
+          discordLink={(el) => <>{el}.</>}
         />
       </p>
     </div>
