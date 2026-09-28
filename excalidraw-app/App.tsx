@@ -187,7 +187,9 @@ window.addEventListener(
 
 let isSelfEmbedding = false;
 
-if (window.self !== window.top) {
+// On the Irate-Box hub a same-origin parent is the hub's own bar (app.html), not
+// Excalidraw embedding itself, so the hub build skips this guard.
+if (window.self !== window.top && import.meta.env.MODE !== "hub") {
   try {
     const parentUrl = new URL(document.referrer);
     const currentUrl = new URL(window.location.href);
