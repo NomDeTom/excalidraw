@@ -31,6 +31,7 @@ import {
   resolvablePromise,
   isRunningInIframe,
   isDevEnv,
+  isOfflineBuild,
 } from "@excalidraw/common";
 import polyfill from "@excalidraw/excalidraw/polyfill";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -902,7 +903,7 @@ const ExcalidrawWrapper = () => {
   const ExcalidrawPlusCommand = {
     label: "Excalidraw+",
     category: DEFAULT_CATEGORIES.links,
-    predicate: true,
+    predicate: !isOfflineBuild(),
     icon: <div style={{ width: 14 }}>{ExcalLogo}</div>,
     keywords: ["plus", "cloud", "server"],
     perform: () => {
@@ -917,7 +918,7 @@ const ExcalidrawWrapper = () => {
   const ExcalidrawPlusAppCommand = {
     label: "Sign up",
     category: DEFAULT_CATEGORIES.links,
-    predicate: true,
+    predicate: !isOfflineBuild(),
     icon: <div style={{ width: 14 }}>{ExcalLogo}</div>,
     keywords: [
       "excalidraw",
@@ -958,7 +959,8 @@ const ExcalidrawWrapper = () => {
             toggleTheme: true,
             export: {
               onExportToBackend,
-              renderCustomUI: excalidrawAPI
+              renderCustomUI:
+                excalidrawAPI && !isOfflineBuild()
                 ? (elements, appState, files) => {
                     return (
                       <ExportToExcalidrawPlus
@@ -999,7 +1001,8 @@ const ExcalidrawWrapper = () => {
 
           return (
             <div className="excalidraw-ui-top-right">
-              {excalidrawAPI?.getEditorInterface().formFactor === "desktop" && (
+              {excalidrawAPI?.getEditorInterface().formFactor === "desktop" &&
+                !isOfflineBuild() && (
                 <ExcalidrawPlusPromoBanner
                   isSignedIn={isExcalidrawPlusSignedUser}
                 />
@@ -1041,7 +1044,7 @@ const ExcalidrawWrapper = () => {
         <OverwriteConfirmDialog>
           <OverwriteConfirmDialog.Actions.ExportToImage />
           <OverwriteConfirmDialog.Actions.SaveToDisk />
-          {excalidrawAPI && (
+          {excalidrawAPI && !isOfflineBuild() && (
             <OverwriteConfirmDialog.Action
               title={t("overwriteConfirm.action.excalidrawPlus.title")}
               actionLabel={t("overwriteConfirm.action.excalidrawPlus.button")}
@@ -1059,7 +1062,9 @@ const ExcalidrawWrapper = () => {
           )}
         </OverwriteConfirmDialog>
         <AppFooter onChange={() => excalidrawAPI?.refresh()} />
-        {excalidrawAPI && <AIComponents excalidrawAPI={excalidrawAPI} />}
+        {excalidrawAPI && !isOfflineBuild() && (
+          <AIComponents excalidrawAPI={excalidrawAPI} />
+        )}
 
         <TTDDialogTrigger />
         {isCollaborating && isOffline && (
@@ -1175,7 +1180,7 @@ const ExcalidrawWrapper = () => {
               label: "GitHub",
               icon: GithubIcon,
               category: DEFAULT_CATEGORIES.links,
-              predicate: true,
+              predicate: !isOfflineBuild(),
               keywords: [
                 "issues",
                 "bugs",
@@ -1197,7 +1202,7 @@ const ExcalidrawWrapper = () => {
               label: "YouTube",
               icon: youtubeIcon,
               category: DEFAULT_CATEGORIES.links,
-              predicate: true,
+              predicate: !isOfflineBuild(),
               keywords: ["features", "tutorials", "howto", "help", "community"],
               perform: () => {
                 window.open(
@@ -1220,7 +1225,7 @@ const ExcalidrawWrapper = () => {
               label: t("overwriteConfirm.action.excalidrawPlus.button"),
               category: DEFAULT_CATEGORIES.export,
               icon: exportToPlus,
-              predicate: true,
+              predicate: !isOfflineBuild(),
               keywords: ["plus", "export", "save", "backup"],
               perform: () => {
                 if (excalidrawAPI) {

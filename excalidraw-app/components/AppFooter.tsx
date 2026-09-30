@@ -1,3 +1,4 @@
+import { isOfflineBuild } from "@excalidraw/common";
 import { Footer } from "@excalidraw/excalidraw/index";
 import React from "react";
 
@@ -18,7 +19,9 @@ export const AppFooter = React.memo(
           }}
         >
           {isVisualDebuggerEnabled() && <DebugFooter onChange={onChange} />}
-          {!isExcalidrawPlusSignedUser && <EncryptedIcon />}
+          {!isExcalidrawPlusSignedUser && !isOfflineBuild() && (
+            <EncryptedIcon />
+          )}
         </div>
       </Footer>
     );
