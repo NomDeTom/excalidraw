@@ -1,3 +1,4 @@
+import { isOfflineBuild } from "@excalidraw/common";
 import { DefaultSidebar, Sidebar, THEME } from "@excalidraw/excalidraw";
 import {
   messageCircleIcon,
@@ -67,6 +68,11 @@ const SidebarPromoCopy = (props: SidebarPromoCopyProps) => {
 
 export const AppSidebar = () => {
   const { theme, openSidebar } = useUIAppState();
+
+  // Comments and presentations are Excalidraw+ promos: keep Library and Search only.
+  if (isOfflineBuild()) {
+    return <DefaultSidebar />;
+  }
 
   return (
     <DefaultSidebar>

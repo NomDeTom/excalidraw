@@ -644,6 +644,9 @@ export const isDevEnv = () => import.meta.env.MODE === ENV.DEVELOPMENT;
 
 export const isProdEnv = () => import.meta.env.MODE === ENV.PRODUCTION;
 
+/** Offline builds (the Irate-Box hub) hide every link and service that needs the internet. */
+export const isOfflineBuild = () => import.meta.env.VITE_APP_OFFLINE === "true";
+
 export const isServerEnv = () =>
   typeof process !== "undefined" && !!process?.env?.NODE_ENV;
 

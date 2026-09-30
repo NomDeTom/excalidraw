@@ -1,6 +1,11 @@
 import React from "react";
 
-import { isDarwin, isFirefox, isWindows } from "@excalidraw/common";
+import {
+  isDarwin,
+  isFirefox,
+  isOfflineBuild,
+  isWindows,
+} from "@excalidraw/common";
 
 import { KEYS } from "@excalidraw/common";
 
@@ -140,7 +145,7 @@ export const HelpDialog = ({ onClose }: { onClose?: () => void }) => {
         title={t("helpDialog.title")}
         className={"HelpDialog"}
       >
-        <Header />
+        {!isOfflineBuild() && <Header />}
         <Section title={t("helpDialog.shortcuts")}>
           <ShortcutIsland
             className="HelpDialog__island--tools"

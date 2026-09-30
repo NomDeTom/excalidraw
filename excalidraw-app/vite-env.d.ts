@@ -22,6 +22,8 @@ interface ImportMetaEnv {
   VITE_APP_DEV_DISABLE_LIVE_RELOAD: string;
 
   VITE_APP_DISABLE_SENTRY: string;
+  // "true" hides Excalidraw+, AI, social and analytics surfaces (Irate-Box hub build)
+  VITE_APP_OFFLINE: string;
 
   // Set this flag to false if you want to open the overlay by default
   VITE_APP_COLLAPSE_OVERLAY: string;

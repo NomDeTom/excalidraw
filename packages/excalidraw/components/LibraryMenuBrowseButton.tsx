@@ -13,6 +13,10 @@ const LibraryMenuBrowseButton = ({
   theme: UIAppState["theme"];
   id: string;
 }) => {
+  // No public library site configured (e.g. an offline build): nothing to browse.
+  if (!import.meta.env.VITE_APP_LIBRARY_URL) {
+    return null;
+  }
   const referrer =
     libraryReturnUrl || window.location.origin + window.location.pathname;
   return (
