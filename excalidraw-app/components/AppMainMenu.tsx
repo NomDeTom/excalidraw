@@ -2,6 +2,8 @@ import {
   loginIcon,
   ExcalLogo,
   eyeIcon,
+  LibraryIcon,
+  save,
 } from "@excalidraw/excalidraw/components/icons";
 import { useI18n } from "@excalidraw/excalidraw/i18n";
 import { MainMenu } from "@excalidraw/excalidraw/index";
@@ -22,6 +24,8 @@ export const AppMainMenu: React.FC<{
   isCollabEnabled: boolean;
   theme: Theme | "system";
   refresh: () => void;
+  onHubSave: () => void;
+  onHubOpen: () => void;
 }> = React.memo((props) => {
   const { t } = useI18n();
   return (
@@ -30,6 +34,16 @@ export const AppMainMenu: React.FC<{
       <MainMenu.DefaultItems.SaveToActiveFile />
       <MainMenu.DefaultItems.Export />
       <MainMenu.DefaultItems.SaveAsImage />
+      {isOfflineBuild() && (
+        <>
+          <MainMenu.Item icon={save} onSelect={props.onHubSave}>
+            Save to hub gallery
+          </MainMenu.Item>
+          <MainMenu.Item icon={LibraryIcon} onSelect={props.onHubOpen}>
+            Open from hub gallery
+          </MainMenu.Item>
+        </>
+      )}
       {props.isCollabEnabled && (
         <MainMenu.DefaultItems.LiveCollaborationTrigger
           isCollaborating={props.isCollaborating}

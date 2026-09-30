@@ -5,21 +5,28 @@ const OSS_FONTS_FALLBACK = "/";
 /**
  * Custom vite plugin for auto-prefixing `EXCALIDRAW_ASSET_PATH` woff2 fonts in `excalidraw-app`.
  *
+ * @param {{ offline?: boolean }} [options] offline: serve fonts only from this build's
+ *   own base path (e.g. /draw/ on the Irate-Box hub) -- no CDN, no root-domain fallback.
  * @returns {import("vite").PluginOption}
  */
-module.exports.woff2BrowserPlugin = () => {
+module.exports.woff2BrowserPlugin = ({ offline = false } = {}) => {
   let isDev;
+  let base = "/";
 
   return {
     name: "woff2BrowserPlugin",
     enforce: "pre",
-    config(_, { command }) {
+    config(config, { command }) {
       isDev = command === "serve";
+      base = config.base || "/";
     },
     transform(code, id) {
       // using copy / replace as fonts defined in the `.css` don't have to be manually copied over (vite/rollup does this automatically),
       // but at the same time can't be easily prefixed with the `EXCALIDRAW_ASSET_PATH` only for the `excalidraw-app`
       if (!isDev && id.endsWith("/excalidraw/fonts/fonts.css")) {
+        if (offline) {
+          return; // fonts.css already points at the bundled ./Assistant-*.woff2
+        }
         return `/* WARN: The following content is generated during excalidraw-app build */
 
       @font-face {
@@ -64,6 +71,22 @@ module.exports.woff2BrowserPlugin = () => {
       }
 
       if (!isDev && id.endsWith("excalidraw-app/index.html")) {
+        if (offline) {
+          return code.replace(
+            "<!-- PLACEHOLDER:EXCALIDRAW_APP_FONTS -->",
+            `<script>
+        window.EXCALIDRAW_ASSET_PATH = ["${base}"];
+      </script>
+      <link
+        rel="preload"
+        href="${base}fonts/Excalifont/Excalifont-Regular-a88b72a24fb54c9f94e3b5fdaa7481c9.woff2"
+        as="font"
+        type="font/woff2"
+        crossorigin="anonymous"
+      />
+    `,
+          );
+        }
         return code.replace(
           "<!-- PLACEHOLDER:EXCALIDRAW_APP_FONTS -->",
           `<script>

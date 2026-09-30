@@ -145,10 +145,10 @@ export default defineConfig(({ mode }) => {
         // its static in public folder
         generateRobotsTxt: false,
       }),
-      woff2BrowserPlugin(),
+      woff2BrowserPlugin({ offline: envVars.VITE_APP_OFFLINE === "true" }),
       react(),
       checker({
-        typescript: true,
+        typescript: envVars.VITE_APP_ENABLE_TYPECHECK !== "false",
         eslint:
           envVars.VITE_APP_ENABLE_ESLINT === "false"
             ? undefined

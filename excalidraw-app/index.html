@@ -93,8 +93,10 @@
     </style>
 
     <!-- Warmup the connection for Google fonts -->
+    <% if (!(typeof VITE_APP_OFFLINE != 'undefined' && VITE_APP_OFFLINE == 'true')) { %>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <% } %>
 
     <!------------------------------------------------------------------------->
     <% if (typeof PROD != 'undefined' && PROD == true) { %>

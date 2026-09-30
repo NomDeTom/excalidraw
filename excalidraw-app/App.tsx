@@ -100,6 +100,7 @@ import Collab, {
 } from "./collab/Collab";
 import { AppFooter } from "./components/AppFooter";
 import { AppMainMenu } from "./components/AppMainMenu";
+import { HubGalleryDialog, saveToHubGallery } from "./components/HubGallery";
 import { AppWelcomeScreen } from "./components/AppWelcomeScreen";
 import {
   ExportToExcalidrawPlus,
@@ -373,11 +374,38 @@ const initializeScene = async (opts: {
   return { scene: null, isExternalScene: false };
 };
 
+/** Offline builds: true/false once the hub's room server has (not) answered; null while
+ * asking. Online builds never ask and report false, which the caller ignores. */
+const useHubRoomProbe = () => {
+  const [up, setUp] = useState<boolean | null>(isOfflineBuild() ? null : false);
+  useEffect(() => {
+    if (!isOfflineBuild()) {
+      return;
+    }
+    let cancelled = false;
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 2000);
+    fetch("/socket.io/?EIO=4&transport=polling", { signal: ctrl.signal })
+      .then((r) => !cancelled && setUp(r.ok))
+      .catch(() => !cancelled && setUp(false))
+      .finally(() => clearTimeout(timer));
+    return () => {
+      cancelled = true;
+      ctrl.abort();
+    };
+  }, []);
+  return up;
+};
+
 const ExcalidrawWrapper = () => {
   const excalidrawAPI = useExcalidrawAPI();
 
   const [errorMessage, setErrorMessage] = useState("");
-  const isCollabDisabled = isRunningInIframe();
+  // Upstream turns collab off inside any iframe (embeds on other sites). The hub opens
+  // this app in its own same-origin frame, so an offline build instead asks whether a
+  // room server answers at /socket.io/ -- present only where the operator installed it.
+  const hubRoomUp = useHubRoomProbe();
+  const isCollabDisabled = isOfflineBuild() ? !hubRoomUp : isRunningInIframe();
 
   const { editorTheme, appTheme, setAppTheme } = useHandleAppTheme();
 
@@ -452,6 +480,7 @@ const ExcalidrawWrapper = () => {
   });
 
   const [, forceRefresh] = useState(false);
+  const [hubGalleryOpen, setHubGalleryOpen] = useState(false);
 
   useEffect(() => {
     if (isDevEnv()) {
@@ -559,6 +588,11 @@ const ExcalidrawWrapper = () => {
   );
 
   useEffect(() => {
+    // Wait for the room probe, so the scene (and any #room= link) initializes once,
+    // with collab either on or off, rather than once each way.
+    if (hubRoomUp === null) {
+      return;
+    }
     if (!excalidrawAPI || (!isCollabDisabled && !collabAPI)) {
       return;
     }
@@ -686,7 +720,14 @@ const ExcalidrawWrapper = () => {
         false,
       );
     };
-  }, [isCollabDisabled, collabAPI, excalidrawAPI, setLangCode, loadImages]);
+  }, [
+    hubRoomUp,
+    isCollabDisabled,
+    collabAPI,
+    excalidrawAPI,
+    setLangCode,
+    loadImages,
+  ]);
 
   useEffect(() => {
     const unloadHandler = (event: BeforeUnloadEvent) => {
@@ -1036,6 +1077,8 @@ const ExcalidrawWrapper = () => {
           isCollabEnabled={!isCollabDisabled}
           theme={appTheme}
           refresh={() => forceRefresh((prev) => !prev)}
+          onHubSave={() => excalidrawAPI && saveToHubGallery(excalidrawAPI)}
+          onHubOpen={() => setHubGalleryOpen(true)}
         />
         <AppWelcomeScreen
           onCollabDialogOpen={onCollabDialogOpen}
@@ -1062,6 +1105,12 @@ const ExcalidrawWrapper = () => {
           )}
         </OverwriteConfirmDialog>
         <AppFooter onChange={() => excalidrawAPI?.refresh()} />
+        {hubGalleryOpen && excalidrawAPI && (
+          <HubGalleryDialog
+            api={excalidrawAPI}
+            onClose={() => setHubGalleryOpen(false)}
+          />
+        )}
         {excalidrawAPI && !isOfflineBuild() && (
           <AIComponents excalidrawAPI={excalidrawAPI} />
         )}
