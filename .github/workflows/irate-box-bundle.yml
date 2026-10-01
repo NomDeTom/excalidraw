@@ -49,8 +49,8 @@ jobs:
           out="excalidraw-app/build/THIRD-PARTY-NOTICES.txt"
           {
             cat <<NOTICE
-          Excalidraw (MIT License, (c) Excalidraw), hub build, built for the Irate-Box hub from ${{ github.repository }} at ${{ github.sha }}.
-          Source: https://github.com/${{ github.repository }}/tree/${{ github.sha }}
+          Excalidraw (MIT License, (c) Excalidraw), hub build, built for the Irate-Box hub from ${{ github.repository }} at $(git rev-parse HEAD).
+          Source: https://github.com/${{ github.repository }}/tree/$(git rev-parse HEAD)
 
           NOTICE
             cat <<'NOTICE'
