@@ -41,6 +41,36 @@ jobs:
         env:
           NODE_OPTIONS: --max-old-space-size=6144
         run: yarn build:hub
+      - name: Third-party notices
+        # THIRD-PARTY-NOTICES.txt in the bundle: what npm does not describe first, then every
+        # package installed under node_modules with its license text -- a superset of what the
+        # bundle contains, since bundlers also take from devDependencies.
+        run: |
+          out="excalidraw-app/build/THIRD-PARTY-NOTICES.txt"
+          {
+            cat <<NOTICE
+          Excalidraw (MIT License, (c) Excalidraw), hub build, built for the Irate-Box hub from ${{ github.repository }} at ${{ github.sha }}.
+          Source: https://github.com/${{ github.repository }}/tree/${{ github.sha }}
+
+          NOTICE
+            cat <<'NOTICE'
+          Fonts in this bundle, from Excalidraw's packages/excalidraw/fonts. Excalifont, Xiaolai and
+          Comic Shanns carry their license in the font metadata, quoted below. Virgil, Nunito,
+          Lilita One, Cascadia Code, Liberation Sans and Assistant are under the SIL Open Font
+          License 1.1 as published by their upstream projects (its text is in Excalifont's block).
+
+          NOTICE
+            node -e '
+              const fs = require("fs"), dir = "packages/excalidraw/fonts";
+              for (const d of fs.readdirSync(dir).sort()) {
+                const f = `${dir}/${d}/index.ts`;
+                if (!fs.existsSync(f)) continue;
+                for (const c of fs.readFileSync(f, "utf8").match(/\/\*[\s\S]*?\*\//g) || [])
+                  if (/licen[sc]e/i.test(c)) console.log(`--- font: ${d}\n${c}\n`);
+              }'
+            node .github/scripts/irate-box-notices.mjs node_modules
+          } > "$out"
+          du -h "$out"
       - name: Record what was built
         run: |
           cat > "excalidraw-app/build/irate-box-bundle.json" <<JSON
