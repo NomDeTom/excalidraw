@@ -3,6 +3,19 @@
     color: var(--color-gray-60);
   }
 
+  .HubGallery__lockpref {
+    display: block;
+    margin-bottom: 0.75rem;
+    font-size: 0.875rem;
+    color: var(--color-gray-60);
+  }
+
+  .HubGallery__remove {
+    margin-top: 0.25rem;
+    font-size: 0.8rem;
+    cursor: pointer;
+  }
+
   .HubGallery__list {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
