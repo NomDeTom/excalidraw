@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2026 NomDeTom
 // Device locks for the Irate-Box hub's gallery saves (store.py, "locks"): a port of the hub's
-// static/lock.js, keeping its storage keys ("hublock:<kind>:<id>") so a lock made here and one
+// web/lock.js, keeping its storage keys ("hublock:<kind>:<id>") so a lock made here and one
 // made in the hub's other editors live side by side on the hub's origin.
 //
 // No password: the hub serves plain HTTP on open WiFi. The browser keeps a random seed and
