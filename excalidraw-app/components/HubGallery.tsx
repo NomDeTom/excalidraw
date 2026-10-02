@@ -5,6 +5,10 @@
 // Times come from the hub, not this browser: the store stamps `created` in powered-on
 // seconds and every listing carries `now` on the same clock, so "saved 5 min ago" is
 // right even though the board has no RTC.
+//
+// Device locks (hubLock.ts): with "Lock new saves to this device" on, a save is locked so
+// that only this browser can remove it from the hub (it still expires as usual). Nobody
+// types a password; this browser keeps the key.
 import {
   exportToBlob,
   loadFromBlob,
@@ -15,11 +19,21 @@ import { useEffect, useState } from "react";
 
 import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types";
 
+import {
+  createLock,
+  forgetLock,
+  hasLock,
+  keepLock,
+  lockChange,
+} from "./hubLock";
+
 import "./HubGallery.scss";
 
 const SAVES_URL = "/api/saves";
 const KIND = "excalidraw";
 const THUMB_MAX_PX = 256;
+const LOCKS = "saves"; // the lock kind for gallery saves, as in the hub's lock.js
+const LOCK_PREF = "hub-gallery-lock";
 
 type SaveMeta = {
   id: string;
@@ -27,6 +41,16 @@ type SaveMeta = {
   name: string;
   created: number;
   thumb: boolean;
+  locked?: boolean;
+  lock_n?: number;
+};
+
+const lockNewSaves = () => {
+  try {
+    return localStorage.getItem(LOCK_PREF) === "1";
+  } catch {
+    return false;
+  }
 };
 
 const blobToDataURL = (blob: Blob) =>
@@ -59,16 +83,28 @@ export const saveToHubGallery = async (api: ExcalidrawImperativeAPI) => {
     // A save without a preview is still a save.
   }
   const state = JSON.parse(serializeAsJSON(elements, appState, files, "local"));
+  const lock = lockNewSaves() ? createLock() : null;
   try {
     const res = await fetch(SAVES_URL, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...(lock ? { "X-Lock-New": lock.header } : {}),
+      },
       body: JSON.stringify({ kind: KIND, name: api.getName(), state, thumb }),
     });
     if (!res.ok) {
       throw new Error(String(res.status));
     }
-    api.setToast({ message: `Saved "${api.getName()}" to the hub gallery.` });
+    if (lock) {
+      const saved: SaveMeta = await res.json();
+      keepLock(LOCKS, saved.id, lock.seed);
+    }
+    api.setToast({
+      message: `Saved "${api.getName()}" to the hub gallery${
+        lock ? ", locked to this device" : ""
+      }.`,
+    });
   } catch {
     api.setToast({
       message: "Could not save to the hub — it did not answer.",
@@ -128,6 +164,35 @@ export const HubGalleryDialog = ({
   const [saves, setSaves] = useState<SaveMeta[] | null>(null);
   const [now, setNow] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [lockNew, setLockNew] = useState(lockNewSaves);
+  const [reload, setReload] = useState(0);
+
+  const toggleLockNew = (on: boolean) => {
+    setLockNew(on);
+    try {
+      localStorage.setItem(LOCK_PREF, on ? "1" : "0");
+    } catch {
+      // not remembered
+    }
+  };
+
+  // Only the device that locked a save can remove it before it expires.
+  const remove = async (save: SaveMeta) => {
+    const change = lockChange(LOCKS, save.id, save.lock_n ?? 0);
+    if (!change || !window.confirm(`Remove "${save.name}" from the hub?`)) {
+      return;
+    }
+    const res = await fetch(`${SAVES_URL}/${save.id}`, {
+      method: "DELETE",
+      headers: change.headers,
+    }).catch(() => null);
+    if (res?.ok) {
+      forgetLock(LOCKS, save.id);
+    } else {
+      setError(`Could not remove "${save.name}".`);
+    }
+    setReload((n) => n + 1);
+  };
 
   useEffect(() => {
     fetch(SAVES_URL)
@@ -141,7 +206,7 @@ export const HubGalleryDialog = ({
         );
       })
       .catch(() => setError("The hub did not answer."));
-  }, []);
+  }, [reload]);
 
   const open = async (save: SaveMeta) => {
     try {
@@ -177,6 +242,15 @@ export const HubGalleryDialog = ({
   return (
     <Dialog size="regular" onCloseRequest={onClose} title="Hub gallery">
       <div className="HubGallery">
+        <label className="HubGallery__lockpref">
+          <input
+            type="checkbox"
+            checked={lockNew}
+            onChange={(e) => toggleLockNew(e.target.checked)}
+          />{" "}
+          Lock new saves to this device: only it can remove them from the hub
+          before they expire. No password; this browser keeps the key.
+        </label>
         {error && <p className="HubGallery__note">{error}</p>}
         {!error && saves === null && (
           <p className="HubGallery__note">Loading…</p>
@@ -201,11 +275,23 @@ export const HubGalleryDialog = ({
                   ) : (
                     <div className="HubGallery__thumb" />
                   )}
-                  <span className="HubGallery__name">{save.name}</span>
+                  <span className="HubGallery__name">
+                    {save.locked ? "🔒 " : ""}
+                    {save.name}
+                  </span>
                   <span className="HubGallery__time">
                     {ago(now - save.created)}
                   </span>
                 </button>
+                {save.locked && hasLock(LOCKS, save.id) && (
+                  <button
+                    type="button"
+                    className="HubGallery__remove"
+                    onClick={() => remove(save)}
+                  >
+                    Remove
+                  </button>
+                )}
               </li>
             ))}
           </ul>
