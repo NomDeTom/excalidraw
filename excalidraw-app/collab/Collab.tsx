@@ -82,6 +82,12 @@ import {
 } from "../data/localStorage";
 import { resetBrowserStateVersions } from "../data/tabSync";
 
+import {
+  canEncryptHere,
+  httpsAddress,
+  NEEDS_HTTPS,
+} from "../share/secureContext";
+
 import { collabErrorIndicatorAtom } from "./CollabError";
 import Portal from "./Portal";
 
@@ -481,6 +487,13 @@ class Collab extends PureComponent<CollabProps, CollabState> {
   startCollaboration = async (
     existingRoomLinkData: null | { roomId: string; roomKey: string },
   ) => {
+    // Over plain HTTP the room key cannot be made or used (share/secureContext.ts): said, not thrown.
+    if (!canEncryptHere()) {
+      this.setErrorDialog(
+        `${NEEDS_HTTPS} Open this page at its HTTPS address: ${httpsAddress()}`,
+      );
+      return null;
+    }
     if (!this.state.username) {
       import("@excalidraw/random-username").then(({ getRandomUsername }) => {
         const username = getRandomUsername();
