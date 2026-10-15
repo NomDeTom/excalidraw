@@ -23,6 +23,12 @@ import { activeRoomLinkAtom } from "../collab/Collab";
 
 import "./ShareDialog.scss";
 import { QRCode } from "./QRCode";
+import {
+  canEncryptHere,
+  certificateAddress,
+  httpsAddress,
+  NEEDS_HTTPS,
+} from "./secureContext";
 
 import type { CollabAPI } from "../collab/Collab";
 
@@ -178,10 +184,45 @@ const ActiveRoomDialog = ({
   );
 };
 
+// Over plain HTTP: neither a live session nor a shareable link can be made here (secureContext.ts).
+// Said in place of their buttons, with the way to the HTTPS address.
+const NeedsHttps = () => (
+  <>
+    <div className="ShareDialog__picker__header">
+      {"Live collaboration needs HTTPS"}
+    </div>
+    <div className="ShareDialog__picker__description">
+      <div style={{ marginBottom: "1em" }}>{NEEDS_HTTPS}</div>
+      {
+        "Open this page at its HTTPS address. If your browser warns about the address, install the box's certificate first."
+      }
+    </div>
+    <div className="ShareDialog__picker__button">
+      <FilledButton
+        size="large"
+        label={"Open the HTTPS address"}
+        icon={LinkIcon}
+        onClick={() => {
+          window.location.assign(httpsAddress());
+        }}
+      />
+    </div>
+    <div className="ShareDialog__picker__description">
+      <a href={certificateAddress()} target="_blank" rel="noopener">
+        {"The box's certificate"}
+      </a>
+    </div>
+  </>
+);
+
 const ShareDialogPicker = (props: ShareDialogProps) => {
   const { t } = useI18n();
 
   const { collabAPI } = props;
+
+  if (!canEncryptHere()) {
+    return <NeedsHttps />;
+  }
 
   const startCollabJSX = collabAPI ? (
     <>
